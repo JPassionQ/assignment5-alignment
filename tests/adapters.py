@@ -6,7 +6,7 @@ from typing import Any, Callable, Literal
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
-from cs336_alignment.sft_helper_methods import tokenize_prompt_and_output, compute_entropy, get_response_log_probs, masked_normalize
+from cs336_alignment.sft_helper_methods import tokenize_prompt_and_output, compute_entropy, get_response_log_probs, masked_normalize, sft_microbatch_train_step
 from transformers import PreTrainedTokenizerBase
 
 
@@ -207,6 +207,7 @@ def run_sft_microbatch_train_step(
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Compute the policy gradient loss and backprop its gradients for a microbatch.
     """
+    return sft_microbatch_train_step(policy_log_probs, response_mask, gradient_accumulation_steps,normalize_constant)
     raise NotImplementedError
 
     
