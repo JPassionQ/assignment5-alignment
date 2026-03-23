@@ -6,7 +6,7 @@ from typing import Any, Callable, Literal
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
-from cs336_alignment.sft_helper_methods import tokenize_prompt_and_output, compute_entropy, get_response_log_probs
+from cs336_alignment.sft_helper_methods import tokenize_prompt_and_output, compute_entropy, get_response_log_probs, masked_normalize
 from transformers import PreTrainedTokenizerBase
 
 
@@ -271,6 +271,7 @@ def run_masked_normalize(
         torch.Tensor, the normalized sum, where masked elements
             (mask=0) don't contribute to the sum.
     """
+    return masked_normalize(tensor, mask, normalize_constant, dim)
     raise NotImplementedError
 
 
