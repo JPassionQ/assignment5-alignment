@@ -6,6 +6,7 @@ from typing import Any, Callable, Literal
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
+from cs336_alignment.sft_helper_methods import tokenize_prompt_and_output
 from transformers import PreTrainedTokenizerBase
 
 
@@ -31,6 +32,7 @@ def run_tokenize_prompt_and_output(
             "response_mask": torch.Tensor of shape (batch_size, max(prompt_and_output_lens) - 1):
                 a mask on the response tokens in `labels`.
     """
+    return tokenize_prompt_and_output(prompt_strs, output_strs, tokenizer)
     raise NotImplementedError
 
 
