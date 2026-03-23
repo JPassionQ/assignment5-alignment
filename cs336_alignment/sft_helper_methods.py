@@ -85,6 +85,41 @@ def compute_entropy(logits: torch.Tensor) -> torch.Tensor:
     entropy = -torch.sum(probs * torch.log(probs + 1e-10), dim=-1)
     return entropy
 
+
+def get_response_log_probs(
+        model,
+        input_ids: torch.Tensor,
+        labels: torch.Tensor,
+        return_token_entropy: bool = False
+) -> dict[str, torch.Tensor]:
+    """
+    Args:
+    model: PreTrainedModel HuggingFace model used for scoring (placed on the correct device and in inference mode if gradients should not be computed).
+
+    input_ids: torch.Tensor shape (batch_size, sequence_length), concatenated prompt + response tokens as produced by your tokenization method.
+
+    labels: torch.Tensor shape (batch_size, sequence_length), labels as produced by your tokenization method.
+
+    return_token_entropy: bool If True, also return per-token entropy by calling compute_entropy.
+
+    Returns:
+    dict[str, torch.Tensor]. 
+        "log_probs" shape (batch_size, sequence_length), conditional log-probabilities log pθ(xt | x<t). 
+        "token_entropy" optional, shape (batch_size, sequence_length), per-token entropy for each position (present only if return_token_entropy=True).
+    """
+    with torch.no_grad():
+        outputs = model(input_ids=input_ids)
+        logits = outputs.logits # shape (batch_size, sequence_length, vocab_size)
+        # 计算 log_probs
+        log_probs = F.log_softmax(logits, dim=-1) # shape (batch_size, sequence_length, vocab_size)
+        # 根据 labels 从 log_probs 中选出对应的 log pθ(xt | x<t)
+        log_probs = log_probs.gather(dim=-1, index=labels.unsqueeze(-1)).squeeze(-1) # shape (batch_size, sequence_length)
+        if return_token_entropy:
+            token_entropy = compute_entropy(logits) # shape (batch_size, sequence_length)
+            return {"log_probs": log_probs, "token_entropy": token_entropy}
+        else:
+            return {"log_probs": log_probs}
+
 if __name__ == "__main__":
     model_name = "/home/jingqi/CS336_Assignments/assignment5-alignment/models/Qwen/Qwen2.5-Math-1.5B"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
