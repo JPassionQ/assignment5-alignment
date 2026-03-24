@@ -236,7 +236,7 @@ def log_generations(
     
     for i in range(len(prompts)):
         # 计算奖励 (包含 format, answer, total)
-        rewards = reward_fn(generated_responses[i], ground_truths[i])
+        rewards = reward_fn("<think>" + generated_responses[i], ground_truths[i])
         total_reward = rewards.get("reward", 0.0)
         
         # 仅计算 Response 部分(mask == 1)的平均熵
