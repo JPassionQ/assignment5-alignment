@@ -60,8 +60,8 @@ def run_sft_experiment():
     data_path = "/home/ubuntu/cs336_assignments/assignment5-alignment/data/MATH/sft_train.jsonl" 
     val_data_path = "/home/ubuntu/cs336_assignments/assignment5-alignment/data/MATH/sft_validation.jsonl"
     
-    epochs = 3
-    batch_size = 128
+    epochs = 1
+    batch_size = 32
     micro_batch_size = 4
     gradient_accumulation_steps = batch_size // micro_batch_size
     learning_rate = 2e-5
@@ -74,7 +74,7 @@ def run_sft_experiment():
     # ==========================================
     # 离线 wandb 初始化
     # ==========================================
-    wandb.init(project="cs336_a5_sft", mode="offline", name="sft_run_1")
+    wandb.init(project="cs336_a5_sft", mode="offline", name="sft_run_1_train_set1024")
     
     # 设置 wandb 指标关联 
     wandb.define_metric("train_step") 
@@ -102,8 +102,8 @@ def run_sft_experiment():
     # 数据加载 (伪代码：你需要实现一个简单的 Dataset 类)
     # ==========================================
     # 假设 load_jsonl 返回 [{"prompt": ..., "response": ...}, ...]
-    train_data = [json.loads(l) for l in open(data_path)]
-    val_data = [json.loads(l) for l in open(val_data_path)][:100]
+    train_data = [json.loads(l) for l in open(data_path)][:1024]
+    val_data = [json.loads(l) for l in open(val_data_path)]
     val_prompts = [d["prompt"] for d in val_data]
     val_gts = [d["answer"] for d in val_data]
     
@@ -169,14 +169,17 @@ def run_sft_experiment():
             log_probs = F.log_softmax(logits, dim=-1)
             # 提取目标 token 的 log prob
             policy_log_probs = log_probs.gather(dim=-1, index=labels.unsqueeze(-1)).squeeze(-1)
+
+            # 计算当前 batch 的 response 的平均长度
+            avg_response_len = response_mask.sum(dim=-1).float().mean().item()
             
             # 3. 计算损失并反向传播 
-            # (注意：你的 sft_microbatch_train_step 内部已经执行了 loss / gradient_accumulation_steps 以及 loss.backward())
+            # (注意：sft_microbatch_train_step 内部已经执行了 loss / gradient_accumulation_steps 以及 loss.backward())
             loss, metadata = sft_microbatch_train_step(
                 policy_log_probs=policy_log_probs,
                 response_mask=response_mask,
                 gradient_accumulation_steps=gradient_accumulation_steps,
-                normalize_constant=1.0
+                normalize_constant=avg_response_len
             )
 
             # 4. 梯度累积与更新
@@ -200,11 +203,29 @@ def run_sft_experiment():
                 })
 
                 train_step += 1
-
+    # 在训练结束的时候评测一次
+    policy_model.eval()
+    # 1. 同步权重到 vLLM
+    load_policy_into_vllm_instance(policy_model, vllm_engine)
+    
+    # 2. 生成并记录
+    eval_logs = log_generations(
+        vllm_model=vllm_engine,
+        policy_model=policy_model,
+        tokenizer=tokenizer,
+        reward_fn=r1_zero_reward_fn, 
+        tokenize_fn=tokenize_prompt_and_output,
+        prompts=val_prompts,
+        ground_truths=val_gts,
+        sampling_params=sampling_params
+    )
+    
+    # 3. 记录到 wandb 且终端打印核心指标
+    wandb.log({**eval_logs["metrics"], "eval_step": eval_step})
     # 保存最终模型
     output_dir = "/home/ubuntu/cs336_assignments/assignment5-alignment/sft_final_model"
-    policy_model.save_pretrained(save_directory=output_dir)
-    tokenizer.save_pretrained(save_directory=output_dir)
+    # policy_model.save_pretrained(save_directory=output_dir)
+    # tokenizer.save_pretrained(save_directory=output_dir)
     wandb.finish()
 
 if __name__ == "__main__":
