@@ -39,7 +39,8 @@ def convert_math_to_sft(input_path, output_path):
             # 3. 组合成目标格式 
             sft_item = {
                 "prompt": full_prompt,
-                "response": full_response
+                "response": full_response,
+                "answer": answer  # 可选字段，保留原始答案以便评估 在valid上进行评估的时候使用
             }
             
             f_out.write(json.dumps(sft_item, ensure_ascii=False) + '\n')

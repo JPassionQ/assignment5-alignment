@@ -208,13 +208,25 @@ def log_generations(
 
     # 3. 计算每 Token 熵
     # 调用你已实现的 get_response_log_probs
-    probs_output = get_response_log_probs(
-        policy_model, 
-        input_ids, 
-        labels, 
-        return_token_entropy=True
-    )
-    token_entropies = probs_output["token_entropy"] # shape: (batch, seq_len)
+    # （引入微批次分块计算防止 OOM）
+    eval_micro_batch = 8  # 推理模式下不用存梯度，可以比训练时的 4 稍微大一点
+    all_token_entropies = []
+    
+    total_samples = input_ids.shape[0]
+    for i in range(0, total_samples, eval_micro_batch):
+        batch_input_ids = input_ids[i:i + eval_micro_batch]
+        batch_labels = labels[i:i + eval_micro_batch]
+        
+        probs_output = get_response_log_probs(
+            policy_model, 
+            batch_input_ids, 
+            batch_labels, 
+            return_token_entropy=True
+        )
+        all_token_entropies.append(probs_output["token_entropy"])
+        
+    # 将分块计算的结果沿着 batch 维度拼接起来
+    token_entropies = torch.cat(all_token_entropies, dim=0) # shape: (total_samples, seq_len)
 
     # 4. 计算各项指标并整理数据
     sample_logs = []
