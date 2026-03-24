@@ -62,10 +62,10 @@ def run_sft_experiment():
     
     epochs = 3
     batch_size = 128
-    micro_batch_size = 8
+    micro_batch_size = 4
     gradient_accumulation_steps = batch_size // micro_batch_size
     learning_rate = 2e-5
-    eval_interval = 50  # 每多少个 train_step 评估一次
+    eval_interval = 10  # 每多少个 train_step 评估一次
     
     # 设置设备：GPU 0 用于策略模型，GPU 1 用于 vLLM
     policy_device = "cuda:0"
@@ -189,14 +189,14 @@ def run_sft_experiment():
                 real_loss = loss.item() * gradient_accumulation_steps
                 # 记录训练指标
                 wandb.log({
-                    "train/loss": real_loss,
+                    "train/loss": real_loss / gradient_accumulation_steps,
                     "train_step": train_step
                 })
 
                 # 实时更新进度条后缀，显示当前 step 和 loss
                 pbar.set_postfix({
                     "step": train_step,
-                    "loss": f"{real_loss:.4f}"
+                    "loss": f"{real_loss / gradient_accumulation_steps:.4f}"
                 })
 
                 train_step += 1
