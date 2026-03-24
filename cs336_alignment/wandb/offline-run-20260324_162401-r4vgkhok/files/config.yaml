@@ -9,7 +9,7 @@ _wandb:
     huggingface_version: 4.51.3
     is_jupyter_run: false
     is_kaggle_kernel: false
-    start_time: 1774356331
+    start_time: 1774369441
     t:
       1:
       - 1
@@ -38,17 +38,16 @@ _wandb:
       - 4
       - 7
       - 13
-      - 37
       - 42
       4: 3.10.16
       5: 0.22.3
       6: 4.51.3
       13: linux-x86_64
     e:
-      s8pbx3w6q8qdpzp0frp10kvmrzuiomhv:
+      7qm9r8dmj208ea6tlsmbxvxcae3pdoew:
         os: Linux-5.4.0-150-generic-x86_64-with-glibc2.27
         python: CPython 3.10.16
-        started_at: '2026-03-24T12:45:31.628621Z'
+        started_at: '2026-03-24T16:24:01.207151Z'
         program: /home/ubuntu/cs336_assignments/assignment5-alignment/cs336_alignment/run_sft.py
         code_path: cs336_alignment/run_sft.py
         code_path_local: run_sft.py
@@ -65,7 +64,7 @@ _wandb:
         disk:
           /:
             total: '266734141440'
-            used: '204309528576'
+            used: '207405187072'
         memory:
           total: '64000000000'
         gpu_nvidia:
@@ -80,7 +79,7 @@ _wandb:
           architecture: Ampere
           uuid: GPU-fb328c3d-77de-fb7d-5d9b-1c13ab8c1419
         cuda_version: '12.3'
-        writer_id: s8pbx3w6q8qdpzp0frp10kvmrzuiomhv
+        writer_id: 7qm9r8dmj208ea6tlsmbxvxcae3pdoew
     m:
     - 1: train_step
       6:
@@ -96,15 +95,15 @@ _wandb:
       5: 2
       6:
       - 1
+    - 1: eval/avg_correct_res_length
+      5: 2
+      6:
+      - 1
     - 1: eval/accuracy
       5: 2
       6:
       - 1
     - 1: eval/avg_entropy
-      5: 2
-      6:
-      - 1
-    - 1: eval/avg_correct_res_length
       5: 2
       6:
       - 1

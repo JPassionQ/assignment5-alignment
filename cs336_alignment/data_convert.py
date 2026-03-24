@@ -50,6 +50,6 @@ def convert_math_to_sft(input_path, output_path):
     print(f"输出文件路径: {output_path}")
 
 # 执行转换
-input_file = "/home/jingqi/CS336_Assignments/assignment5-alignment/data/MATH/origin_validation.jsonl" 
-output_file = "/home/jingqi/CS336_Assignments/assignment5-alignment/data/MATH/sft_validation.jsonl"
+input_file = "/home/jingqi/CS336_Assignments/assignment5-alignment/data/MATH/origin_train.jsonl" 
+output_file = "/home/jingqi/CS336_Assignments/assignment5-alignment/data/MATH/sft_train.jsonl"
 convert_math_to_sft(input_file, output_file)
