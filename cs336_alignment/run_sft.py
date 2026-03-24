@@ -60,12 +60,12 @@ def run_sft_experiment():
     data_path = "/home/ubuntu/cs336_assignments/assignment5-alignment/data/MATH/sft_train.jsonl" 
     val_data_path = "/home/ubuntu/cs336_assignments/assignment5-alignment/data/MATH/sft_validation.jsonl"
     
-    epochs = 1
-    batch_size = 32
+    epochs = 2
+    batch_size = 128
     micro_batch_size = 4
     gradient_accumulation_steps = batch_size // micro_batch_size
     learning_rate = 2e-5
-    eval_interval = 10  # 每多少个 train_step 评估一次
+    eval_interval = 50  # 每多少个 train_step 评估一次
     
     # 设置设备：GPU 0 用于策略模型，GPU 1 用于 vLLM
     policy_device = "cuda:0"
@@ -124,6 +124,7 @@ def run_sft_experiment():
         # 使用 tqdm 包装 train_loader，显式显示当前 Epoch 的进度
         pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}")
 
+        running_loss = 0.0
         for idx, batch in enumerate(pbar):
             
             # 定期评估：仅在达到 eval_interval 且是当前 train_step 的第一个 micro_batch 时执行
@@ -181,7 +182,7 @@ def run_sft_experiment():
                 gradient_accumulation_steps=gradient_accumulation_steps,
                 normalize_constant=avg_response_len
             )
-
+            running_loss += loss.item()
             # 4. 梯度累积与更新
             if (idx + 1) % gradient_accumulation_steps == 0:
                 # 梯度裁剪：截断值为 1.0
@@ -189,19 +190,18 @@ def run_sft_experiment():
                 optimizer.step()
                 optimizer.zero_grad()
                 
-                real_loss = loss.item() * gradient_accumulation_steps
                 # 记录训练指标
                 wandb.log({
-                    "train/loss": real_loss / gradient_accumulation_steps,
+                    "train/loss": running_loss,
                     "train_step": train_step
                 })
 
                 # 实时更新进度条后缀，显示当前 step 和 loss
                 pbar.set_postfix({
                     "step": train_step,
-                    "loss": f"{real_loss / gradient_accumulation_steps:.4f}"
+                    "loss": f"{running_loss:.4f}"
                 })
-
+                running_loss = 0.0
                 train_step += 1
     # 在训练结束的时候评测一次
     policy_model.eval()
