@@ -74,7 +74,7 @@ def run_sft_experiment():
     # ==========================================
     # 离线 wandb 初始化
     # ==========================================
-    wandb.init(project="cs336_a5_sft", mode="offline", name="sft_run_1_train_set1024")
+    wandb.init(project="cs336_a5_sft", mode="offline", name="sft_run_1_train_set_full")
     
     # 设置 wandb 指标关联 
     wandb.define_metric("train_step") 
@@ -102,7 +102,7 @@ def run_sft_experiment():
     # 数据加载 (伪代码：你需要实现一个简单的 Dataset 类)
     # ==========================================
     # 假设 load_jsonl 返回 [{"prompt": ..., "response": ...}, ...]
-    train_data = [json.loads(l) for l in open(data_path)][:1024]
+    train_data = [json.loads(l) for l in open(data_path)]
     val_data = [json.loads(l) for l in open(val_data_path)]
     val_prompts = [d["prompt"] for d in val_data]
     val_gts = [d["answer"] for d in val_data]
