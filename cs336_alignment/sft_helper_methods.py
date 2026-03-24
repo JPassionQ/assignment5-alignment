@@ -3,6 +3,10 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+import numpy as np
+from typing import List, Callable, Any
+from vllm import LLM, SamplingParams
+
 def tokenize_prompt_and_output(prompt_strs, output_strs, tokenizer):
     """
     Tokenize the prompt and output strings, and construct a mask that is 1 for the response tokens and 0 for
@@ -170,6 +174,91 @@ def sft_microbatch_train_step(
     # 反向传播
     loss.backward()
     return loss.detach(), {"microbatch_loss": loss.detach()}
+
+import torch
+import numpy as np
+from typing import List, Callable, Any, Dict
+from vllm import LLM, SamplingParams
+
+@torch.inference_mode()
+def log_generations(
+    vllm_model: LLM,
+    policy_model: torch.nn.Module,
+    tokenizer: Any,
+    reward_fn: Callable[[str, str], Dict[str, float]],
+    tokenize_fn: Callable, # 对应 tokenize_prompt_and_output
+    prompts: List[str],
+    ground_truths: List[str],
+    sampling_params: SamplingParams,
+) -> Dict[str, Any]:
+    """
+    在训练循环中记录模型生成详情及统计指标
+    """
+    # 1. 使用 vLLM 生成响应
+    # 确保采样参数中包含 stop=["</answer>"] 以便正确解析
+    outputs = vllm_model.generate(prompts, sampling_params)
+    generated_responses = [output.outputs[0].text for output in outputs]
+
+    # 2. 为计算熵准备 Tensor (需要将 Prompt 和 Response 拼接并 Mask)
+    # 使用 tokenize_prompt_and_output 处理所有生成的样本
+    tokenized_data = tokenize_fn(prompts, generated_responses, tokenizer)
+    input_ids = tokenized_data["input_ids"].to(policy_model.device)
+    labels = tokenized_data["labels"].to(policy_model.device)
+    response_mask = tokenized_data["response_mask"].to(policy_model.device)
+
+    # 3. 计算每 Token 熵
+    # 调用你已实现的 get_response_log_probs
+    probs_output = get_response_log_probs(
+        policy_model, 
+        input_ids, 
+        labels, 
+        return_token_entropy=True
+    )
+    token_entropies = probs_output["token_entropy"] # shape: (batch, seq_len)
+
+    # 4. 计算各项指标并整理数据
+    sample_logs = []
+    resp_lengths = []
+    correct_lengths = []
+    incorrect_lengths = []
+    
+    for i in range(len(prompts)):
+        # 计算奖励 (包含 format, answer, total)
+        rewards = reward_fn(generated_responses[i], ground_truths[i])
+        total_reward = rewards.get("reward", 0.0)
+        
+        # 仅计算 Response 部分(mask == 1)的平均熵
+        mask_i = response_mask[i].bool() # mask_i 是一个布尔向量，指示哪些位置是 response tokens
+        avg_entropy = token_entropies[i][mask_i].mean().item() if mask_i.any() else 0.0
+        
+        # 响应长度统计 (基于 token 数) 
+        length = mask_i.sum().item()
+        resp_lengths.append(length)
+        
+        if total_reward > 0:
+            correct_lengths.append(length)
+        else:
+            incorrect_lengths.append(length)
+
+        # 记录单条样本详情
+        sample_logs.append({
+            "prompt": prompts[i],
+            "response": generated_responses[i],
+            "ground_truth": ground_truths[i],
+            "reward_info": rewards,
+            "avg_token_entropy": avg_entropy
+        })
+
+    # 5. 汇总宏观统计数据 
+    metrics = {
+        "eval/avg_response_length": np.mean(resp_lengths),
+        "eval/avg_correct_res_length": np.mean(correct_lengths) if correct_lengths else 0.0,
+        "eval/avg_incorrect_res_length": np.mean(incorrect_lengths) if incorrect_lengths else 0.0,
+        "eval/accuracy": len(correct_lengths) / len(prompts),
+        "eval/avg_entropy": token_entropies[response_mask.bool()].mean().item()
+    }
+
+    return {"samples": sample_logs, "metrics": metrics}
 
 
 if __name__ == "__main__":
