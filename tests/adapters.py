@@ -7,7 +7,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import Dataset
 from cs336_alignment.sft_helper_methods import tokenize_prompt_and_output, compute_entropy, get_response_log_probs, masked_normalize, sft_microbatch_train_step
-from cs336_alignment.grpo_helper_methods import compute_group_normalized_rewards
+from cs336_alignment.grpo_helper_methods import compute_group_normalized_rewards, compute_naive_policy_gradient_loss
 from transformers import PreTrainedTokenizerBase
 
 
@@ -145,6 +145,7 @@ def run_compute_naive_policy_gradient_loss(
         torch.Tensor of shape (batch_size, sequence_length): 
             the policy gradient per-token loss.
     """
+    return compute_naive_policy_gradient_loss(raw_rewards_or_advantages, policy_log_probs)
     raise NotImplementedError
 
 

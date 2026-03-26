@@ -78,3 +78,19 @@ def compute_group_normalized_rewards(
     
     return advantages, raw_rewards, metadata
 
+def compute_naive_policy_gradient_loss(
+        raw_rewards_or_advantages: torch.Tensor,
+        policy_log_probs: torch.Tensor
+):
+    """
+    Compute the policy-gradient loss at every token, where raw_rewards_or_advantages is either the raw reward or an already-normalized advantage.
+
+    Args:
+    raw_rewards_or_advantages: torch.Tensor Shape (batch_size, 1), scalar reward/advantage for each rollout response.
+    policy_log_probs: torch.Tensor Shape (batch_size, sequence_length), logprobs for each token.
+
+    Returns:
+    torch.Tensor Shape (batch_size, sequence_length), the per-token policy-gradient loss (to be aggregated across the batch and sequence dimensions in the training loop).
+    """
+    pre_token_pg_loss = - policy_log_probs * raw_rewards_or_advantages
+    return pre_token_pg_loss
