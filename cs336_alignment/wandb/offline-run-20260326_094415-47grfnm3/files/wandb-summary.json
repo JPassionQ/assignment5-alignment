@@ -1,0 +1,1 @@
+{"_runtime": 895, "eval/avg_response_length": 213.318, "eval/avg_correct_res_length": 120.29577464788733, "eval/avg_incorrect_res_length": 228.71328671328672, "eval/accuracy": 0.142, "eval/avg_entropy": 0.76171875, "ei_step": 5, "_timestamp": 1774519146.2526784, "_step": 30, "train/ei_sft_loss": 26.5, "sft_step": 25}
