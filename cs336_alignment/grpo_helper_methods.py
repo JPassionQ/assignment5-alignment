@@ -158,6 +158,9 @@ def compute_policy_gradient_loss(
         old_log_probs: torch.Tensor | None = None,
         cliprange: float | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    """
+    根据不同的损失类型计算损失
+    """
     if loss_type == "no_baseline":
         loss = compute_naive_policy_gradient_loss(raw_rewards, policy_log_probs)
         metadata = {}
