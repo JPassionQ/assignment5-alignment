@@ -81,7 +81,7 @@ def compute_group_normalized_rewards(
 def compute_naive_policy_gradient_loss(
         raw_rewards_or_advantages: torch.Tensor,
         policy_log_probs: torch.Tensor
-):
+)->torch.Tensor:
     """
     Compute the policy-gradient loss at every token, where raw_rewards_or_advantages is either the raw reward or an already-normalized advantage.
 
@@ -94,3 +94,57 @@ def compute_naive_policy_gradient_loss(
     """
     pre_token_pg_loss = - policy_log_probs * raw_rewards_or_advantages
     return pre_token_pg_loss
+
+def compute_grpo_clip_loss(
+        advantages: torch.Tensor,
+        policy_log_probs: torch.Tensor,
+        old_log_probs: torch.Tensor,
+        cliprange: float
+)->tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    """
+    Args:
+
+    advantages: torch.Tensor Shape (batch_size, 1), per-example advantages A.
+    
+    policy_log_probs: torch.Tensor Shape (batch_size, sequence_length), per-token log probs from the policy being trained.
+
+    old_log_probs: torch.Tensor Shape (batch_size, sequence_length), per-token log probs from the old policy.
+
+    cliprange: float Clip parameter ϵ (e.g. 0.2).
+
+    Returns:
+    tuple[torch.Tensor, dict[str, torch.Tensor]].
+    
+        loss torch.Tensor of shape (batch_size, sequence_length), the per-token clipped loss.
+
+        metadata dict containing whatever you want to log. We suggest logging whether each token was clipped or not, i.e., whether the clipped policy gradient loss on the RHS of the min was lower than the LHS.
+    """
+    # 1. 计算当前策略与旧策略的概率比率
+    # 使用 exp 来保证数值稳定性
+    ratio = torch.exp(policy_log_probs - old_log_probs)  # Shape: (batch_size, sequence_length)
+
+    # 2.将优势值广播到序列维度
+
+    # 3. 计算GRPO-Clip的两个代理项
+    surrogate1 = ratio * advantages  # Shape: (batch_size, sequence_length)
+    surrogate2 = torch.clamp(
+        ratio,
+        1.0 - cliprange,
+        1.0 + cliprange
+    ) * advantages  # Shape: (batch_size, sequence_length)
+    # 4.取最小值并取符号 作为 loss
+    per_token_loss = -torch.min(surrogate1, surrogate2)  # Shape: (batch_size, sequence_length)
+
+    # 5.计算元数据
+    # 记录有多少token的surrogate2 < surrogate1 (当 A > 0 时)
+    # 或者说记录有多少比例的token实际上被clip限制了
+    with torch.no_grad():
+        # 当被裁剪后的项小于未裁剪项时，说明发生了裁剪动作
+        clipped = (surrogate2 < surrogate1).float()  # Shape: (batch_size, sequence_length)
+        clip_fraction = clipped # 后续可以通过 masked_mean 计算具体的比例
+    
+    metadata = {
+        "loss/clip_fraction": clip_fraction
+    }
+
+    return per_token_loss, metadata
