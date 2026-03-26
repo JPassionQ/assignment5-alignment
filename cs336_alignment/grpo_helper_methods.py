@@ -194,3 +194,39 @@ def masked_mean(
     count = mask.sum(dim=dim)
     mean = sum_masked / count
     return mean
+
+def grpo_microbatch_train_step(
+        policy_log_probs: torch.Tensor,
+        response_mask: torch.Tensor,
+        gradient_accumulation_steps: int,
+        loss_type: Literal["no_baseline", "reinforce_with_baseline", "grpo_clip"],
+        raw_rewards: torch.Tensor | None = None,
+        advantages: torch.Tensor | None = None,
+        old_log_probs: torch.Tensor | None = None,
+        cliprange: float | None = None,
+) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    """
+    Execute a forward-and-backward pass on a microbatch.
+
+    Returns:
+    tuple[torch.Tensor, dict[str, torch.Tensor]].
+        loss scalar tensor. The microbatch loss, adjusted for gradient accumulation. We return this so we can log it.
+        metadata Dict with metadata from the underlying loss call, and any other statistics you might want to log.
+    """
+    # 1. 根据 loss_type 计算每个 token 的损失
+    pg_loss, metadata = compute_policy_gradient_loss(
+        policy_log_probs=policy_log_probs,
+        loss_type=loss_type,
+        raw_rewards=raw_rewards,
+        advantages=advantages,
+        old_log_probs=old_log_probs,
+        cliprange=cliprange,
+    )
+
+    # 2. 对损失进行掩码处理，确保只计算响应部分的损失
+    masked_pg_loss = masked_mean(pg_loss, response_mask, dim=1)  # Shape: (batch_size,)
+    # 3. 平均损失并调整以适应梯度累积
+    mean_loss = masked_pg_loss.mean()  # Shape: scalar
+    loss = mean_loss / gradient_accumulation_steps # Shape: scalar
+    loss.backward()
+    return loss.detach(), metadata
