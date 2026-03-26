@@ -4,7 +4,7 @@ from torch import nn
 from torch.nn import functional as F
 
 import numpy as np
-from typing import List, Callable, Dict, Tuple
+from typing import List, Callable, Dict, Tuple, Literal
 from vllm import LLM, SamplingParams
 
 
@@ -148,3 +148,22 @@ def compute_grpo_clip_loss(
     }
 
     return per_token_loss, metadata
+
+
+def compute_policy_gradient_loss(
+        policy_log_probs: torch.Tensor,
+        loss_type: Literal["no_baseline", "reinforce_with_baseline", "grpo_clip"],
+        raw_rewards: torch.Tensor | None = None,
+        advantages: torch.Tensor | None = None,
+        old_log_probs: torch.Tensor | None = None,
+        cliprange: float | None = None,
+) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    if loss_type == "no_baseline":
+        loss = compute_naive_policy_gradient_loss(raw_rewards, policy_log_probs)
+        metadata = {}
+    elif loss_type == "reinforce_with_baseline":
+        loss = compute_naive_policy_gradient_loss(advantages, policy_log_probs)
+        metadata = {}
+    elif loss_type == "grpo_clip":
+        loss, metadata = compute_grpo_clip_loss(advantages, policy_log_probs, old_log_probs, cliprange)
+    return loss, metadata
