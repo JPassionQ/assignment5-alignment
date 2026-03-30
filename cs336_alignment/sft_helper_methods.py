@@ -111,18 +111,17 @@ def get_response_log_probs(
         "log_probs" shape (batch_size, sequence_length), conditional log-probabilities log pθ(xt | x<t). 
         "token_entropy" optional, shape (batch_size, sequence_length), per-token entropy for each position (present only if return_token_entropy=True).
     """
-    with torch.no_grad():
-        outputs = model(input_ids=input_ids)
-        logits = outputs.logits # shape (batch_size, sequence_length, vocab_size)
-        # 计算 log_probs
-        log_probs = F.log_softmax(logits, dim=-1) # shape (batch_size, sequence_length, vocab_size)
-        # 根据 labels 从 log_probs 中选出对应的 log pθ(xt | x<t)
-        log_probs = log_probs.gather(dim=-1, index=labels.unsqueeze(-1)).squeeze(-1) # shape (batch_size, sequence_length)
-        if return_token_entropy:
-            token_entropy = compute_entropy(logits) # shape (batch_size, sequence_length)
-            return {"log_probs": log_probs, "token_entropy": token_entropy}
-        else:
-            return {"log_probs": log_probs}
+    outputs = model(input_ids=input_ids)
+    logits = outputs.logits # shape (batch_size, sequence_length, vocab_size)
+    # 计算 log_probs
+    log_probs = F.log_softmax(logits, dim=-1) # shape (batch_size, sequence_length, vocab_size)
+    # 根据 labels 从 log_probs 中选出对应的 log pθ(xt | x<t)
+    log_probs = log_probs.gather(dim=-1, index=labels.unsqueeze(-1)).squeeze(-1) # shape (batch_size, sequence_length)
+    if return_token_entropy:
+        token_entropy = compute_entropy(logits) # shape (batch_size, sequence_length)
+        return {"log_probs": log_probs, "token_entropy": token_entropy}
+    else:
+        return {"log_probs": log_probs}
 
 
 def masked_normalize(
