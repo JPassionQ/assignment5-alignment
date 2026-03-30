@@ -181,6 +181,8 @@ def run_grpo(
         labels = tokenized["labels"].to(policy_device)
         response_mask = tokenized["response_mask"].to(policy_device)
 
+        response_lengths = response_mask.sum(dim=1)
+        current_max_res_len = response_lengths.max().item()
         # 5. Compute Old Log Probs (Once per rollout batch for off-policy or grpo_clip)
         old_log_probs = None
         if loss_type == "grpo_clip" or epochs_per_rollout_batch > 1:
@@ -223,13 +225,14 @@ def run_grpo(
                     policy_out = get_response_log_probs(
                         policy_model, mb_input_ids, mb_labels, return_token_entropy=True
                     )
-                    
+
                     # Backward pass
                     mb_loss, mb_metadata = grpo_microbatch_train_step(
                         policy_log_probs=policy_out["log_probs"],
                         response_mask=mb_mask,
                         gradient_accumulation_steps=gradient_accumulation_steps,
                         loss_type=loss_type,
+                        normalize_constant=float(current_max_res_len),
                         raw_rewards=mb_raw,
                         advantages=mb_adv,
                         old_log_probs=mb_old_log_probs,

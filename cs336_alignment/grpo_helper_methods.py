@@ -6,7 +6,7 @@ from torch.nn import functional as F
 import numpy as np
 from typing import List, Callable, Dict, Tuple, Literal
 from vllm import LLM, SamplingParams
-
+from sft_helper_methods import masked_normalize
 
 def compute_group_normalized_rewards(
     reward_fn: Callable[[str, str], Dict[str, float]],
@@ -200,6 +200,7 @@ def grpo_microbatch_train_step(
         response_mask: torch.Tensor,
         gradient_accumulation_steps: int,
         loss_type: Literal["no_baseline", "reinforce_with_baseline", "grpo_clip"],
+        normalize_constant: float,
         raw_rewards: torch.Tensor | None = None,
         advantages: torch.Tensor | None = None,
         old_log_probs: torch.Tensor | None = None,
@@ -224,7 +225,8 @@ def grpo_microbatch_train_step(
     )
 
     # 2. 对损失进行掩码处理，确保只计算响应部分的损失
-    masked_pg_loss = masked_mean(pg_loss, response_mask, dim=1)  # Shape: (batch_size,)
+    # masked_pg_loss = masked_mean(pg_loss, response_mask, dim=1)  # Shape: (batch_size,)
+    masked_pg_loss = masked_normalize(pg_loss, response_mask, normalize_constant, dim=1)  # Shape: (batch_size,)
     # 3. 平均损失并调整以适应梯度累积
     mean_loss = masked_pg_loss.mean()  # Shape: scalar
     loss = mean_loss / gradient_accumulation_steps # Shape: scalar
