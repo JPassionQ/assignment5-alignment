@@ -9,7 +9,7 @@ _wandb:
     huggingface_version: 4.51.3
     is_jupyter_run: false
     is_kaggle_kernel: false
-    start_time: 1774952178
+    start_time: 1774960264
     t:
       1:
       - 1
@@ -38,17 +38,16 @@ _wandb:
       - 4
       - 7
       - 13
-      - 37
       - 42
       4: 3.10.16
       5: 0.22.3
       6: 4.51.3
       13: linux-x86_64
     e:
-      bmwpvs3fwujriluz1ggsbxonxfw4f53v:
+      jbzbtcipcubc8slfhse5ncdnd8taaips:
         os: Linux-5.4.0-150-generic-x86_64-with-glibc2.27
         python: CPython 3.10.16
-        started_at: '2026-03-31T10:16:18.097414Z'
+        started_at: '2026-03-31T12:31:04.424035Z'
         program: /home/ubuntu/cs336_assignments/assignment5-alignment/cs336_alignment/run_grpo.py
         code_path: cs336_alignment/run_grpo.py
         code_path_local: run_grpo.py
@@ -64,8 +63,8 @@ _wandb:
         gpu_count: 2
         disk:
           /:
-            total: '266717757440'
-            used: '216686919680'
+            total: '266717626368'
+            used: '219780481024'
         memory:
           total: '64000000000'
         gpu_nvidia:
@@ -80,7 +79,7 @@ _wandb:
           architecture: Ampere
           uuid: GPU-fb328c3d-77de-fb7d-5d9b-1c13ab8c1419
         cuda_version: '12.3'
-        writer_id: bmwpvs3fwujriluz1ggsbxonxfw4f53v
+        writer_id: jbzbtcipcubc8slfhse5ncdnd8taaips
     m:
     - 1: grpo_step
       6:
@@ -116,15 +115,11 @@ _wandb:
       5: 1
       6:
       - 1
-    - 1: eval/avg_incorrect_res_length
-      5: 2
-      6:
-      - 1
-    - 1: eval/avg_response_length
-      5: 2
-      6:
-      - 1
     - 1: eval/avg_correct_res_length
+      5: 2
+      6:
+      - 1
+    - 1: eval/avg_incorrect_res_length
       5: 2
       6:
       - 1
@@ -133,6 +128,10 @@ _wandb:
       6:
       - 1
     - 1: eval/avg_entropy
+      5: 2
+      6:
+      - 1
+    - 1: eval/avg_response_length
       5: 2
       6:
       - 1
