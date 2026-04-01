@@ -35,12 +35,18 @@ def init_vllm(model_id: str, device: str, seed: int, gpu_memory_utilization: flo
             enforce_eager=True,
         )
 
+def load_policy_into_vllm_instance(policy: torch.nn.Module, llm: LLM):
+    state_dict = policy.state_dict()
+    llm_model = llm.llm_engine.model_executor.driver_worker.model_runner.model
+    llm_model.load_weights(state_dict.items())
+
 # ==========================================
 # 2. Main Evaluation Logic
 # ==========================================
 def run_eval(
-    model_path: str = "/home/ubuntu/cs336_assignments/assignment5-alignment/grpo_final_model/grpo_final_grpo_clip",
+    model_path: str = "/home/ubuntu/cs336_assignments/assignment5-alignment/grpo_final_model/grpo_final_grpo_clip_epoch2_train_batch256",
     val_data_path: str = "/home/ubuntu/cs336_assignments/assignment5-alignment/data/MATH/sft_validation.jsonl",
+    BASE_MODEL_PATH = "/home/ubuntu/cs336_assignments/assignment5-alignment/models/Qwen/Qwen2.5-Math-1.5B",
     gpu_memory_utilization: float = 0.85,
     eval_samples: int = 1024,
 ):
@@ -56,8 +62,11 @@ def run_eval(
     ).to(policy_device)
     policy_model.eval()
     
-    print("Loading vLLM Engine...")
-    vllm_engine = init_vllm(model_path, device=vllm_device, seed=42, gpu_memory_utilization=gpu_memory_utilization)
+    print("Loading vLLM Engine with base config...")
+    vllm_engine = init_vllm(BASE_MODEL_PATH, device=vllm_device, seed=42, gpu_memory_utilization=gpu_memory_utilization)
+
+    print("Injecting finetuned weights into vLLM...")
+    load_policy_into_vllm_instance(policy_model, vllm_engine)
 
     # Data Loading
     print(f"Loading {eval_samples} validation samples from {val_data_path}...")

@@ -60,20 +60,20 @@ def run_grpo(
     train_data_path: str = "/home/ubuntu/cs336_assignments/assignment5-alignment/data/MATH/sft_train.jsonl",
     val_data_path: str = "/home/ubuntu/cs336_assignments/assignment5-alignment/data/MATH/sft_validation.jsonl",
     n_grpo_steps: int = 200,
-    learning_rate: float = 1e-5,
+    learning_rate: float = 2e-5, # [1e-6, 5e-6, 1e-5]
     advantage_eps: float = 1e-6,
     rollout_batch_size: int = 256,
     group_size: int = 8,
     sampling_temperature: float = 1.0,
     sampling_min_tokens: int = 4,
     sampling_max_tokens: int = 1024,
-    epochs_per_rollout_batch: int = 1,
+    epochs_per_rollout_batch: int = 2,
     train_batch_size: int = 256,
     gradient_accumulation_steps: int = 128,
     gpu_memory_utilization: float = 0.85,
-    loss_type: str = "reinforce_with_baseline", 
+    loss_type: str = "grpo_clip", 
     # Literal["no_baseline", "reinforce_with_baseline", "grpo_clip"] = "reinforce_with_baseline",
-    use_std_normalization: bool = True,
+    use_std_normalization: bool = False,
     cliprange: float = 0.2,
     eval_freq: int = 10,
     eval_samples: int = 1024,
@@ -89,7 +89,7 @@ def run_grpo(
     vllm_device = "cuda:1"
 
     # Initialize WandB
-    wandb.init(project="cs336_a5_grpo", mode="offline", name=f"grpo_{loss_type}_lr{learning_rate}")
+    wandb.init(project="cs336_a5_grpo", mode="offline", name=f"grpo_{loss_type}_lr{learning_rate}_epoch{epochs_per_rollout_batch}_train_batch{train_batch_size}")
     wandb.define_metric("grpo_step")
     wandb.define_metric("eval_step")
     wandb.define_metric("train/*", step_metric="grpo_step")
@@ -181,6 +181,7 @@ def run_grpo(
         labels = tokenized["labels"].to(policy_device)
         response_mask = tokenized["response_mask"].to(policy_device)
 
+        # 计算最大长度
         response_lengths = response_mask.sum(dim=1)
         current_max_res_len = response_lengths.max().item()
         # 5. Compute Old Log Probs (Once per rollout batch for off-policy or grpo_clip)
@@ -225,7 +226,7 @@ def run_grpo(
                     policy_out = get_response_log_probs(
                         policy_model, mb_input_ids, mb_labels, return_token_entropy=True
                     )
-
+                    
                     # Backward pass
                     mb_loss, mb_metadata = grpo_microbatch_train_step(
                         policy_log_probs=policy_out["log_probs"],
@@ -295,11 +296,27 @@ def run_grpo(
             wandb.log({**eval_logs["metrics"], "eval_step": step})
 
     # Save Final Model
-    output_dir = f"/home/ubuntu/cs336_assignments/assignment5-alignment/grpo_final_model/grpo_final_{loss_type}"
-    policy_model.save_pretrained(save_directory=output_dir)
+    output_dir = f"/home/ubuntu/cs336_assignments/assignment5-alignment/grpo_final_model/grpo_final_{loss_type}_epoch{epochs_per_rollout_batch}_train_batch{train_batch_size}"
+    print(f"Saving full model to {output_dir}...")
+    
+    # 1. 保存模型权重与架构配置 (强制使用 safetensors，vLLM 加载更快且不会出错)
+    policy_model.save_pretrained(
+        save_directory=output_dir, 
+        safe_serialization=True
+    )
+    # 2. 保存 Tokenizer (包含词表、special_tokens_map 和 chat_template)
     tokenizer.save_pretrained(save_directory=output_dir)
+    # 3. 保存 Generation Config (极其关键！)
+    # 确保 vLLM 在生成时知道正确的 eos_token, pad_token 和 bos_token
+    if policy_model.generation_config is not None:
+        policy_model.generation_config.save_pretrained(output_dir)
+    else:
+        print("Warning: generation_config not found, vLLM will use default HF configs.")
+    # 4. 保存基础 Config (双保险，确保 config.json 完整)
+    policy_model.config.save_pretrained(output_dir)
+    print("Model saved successfully!")
     wandb.finish()
 
 if __name__ == "__main__":
-    # typer.run(run_grpo)
-    run_grpo()
+    typer.run(run_grpo)
+    # run_grpo()
