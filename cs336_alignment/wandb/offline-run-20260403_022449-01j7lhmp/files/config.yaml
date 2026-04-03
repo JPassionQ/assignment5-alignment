@@ -9,7 +9,7 @@ _wandb:
     huggingface_version: 4.51.3
     is_jupyter_run: false
     is_kaggle_kernel: false
-    start_time: 1775161745
+    start_time: 1775183089
     t:
       1:
       - 1
@@ -38,17 +38,49 @@ _wandb:
       - 4
       - 7
       - 13
-      - 37
       - 42
       4: 3.10.16
       5: 0.22.3
       6: 4.51.3
       13: linux-x86_64
     e:
-      aaux62cybt7tlnmcnhl30nnp2fzhdv1m:
+      5fcmz7914ehyuv4utc7zsjica34ezitq:
         os: Linux-5.4.0-150-generic-x86_64-with-glibc2.27
         python: CPython 3.10.16
-        started_at: '2026-04-02T20:29:05.250343Z'
+        started_at: '2026-04-03T02:24:49.212808Z'
+        args:
+        - --model-path
+        - /home/ubuntu/cs336_assignments/assignment5-alignment/models/Qwen/Qwen2.5-Math-1.5B
+        - --train-data-path
+        - /home/ubuntu/cs336_assignments/assignment5-alignment/data/MATH/sft_train.jsonl
+        - --val-data-path
+        - /home/ubuntu/cs336_assignments/assignment5-alignment/data/MATH/sft_validation.jsonl
+        - --n-grpo-steps
+        - '50'
+        - --learning-rate
+        - 1e-5
+        - --advantage-eps
+        - 1e-6
+        - --rollout-batch-size
+        - '256'
+        - --group-size
+        - '8'
+        - --sampling-temperature
+        - '1.0'
+        - --epochs-per-rollout-batch
+        - '3'
+        - --train-batch-size
+        - '64'
+        - --gradient-accumulation-steps
+        - '32'
+        - --loss-type
+        - grpo_clip
+        - --cliprange
+        - '0.2'
+        - --eval-freq
+        - '5'
+        - --eval-samples
+        - '1024'
         program: /home/ubuntu/cs336_assignments/assignment5-alignment/cs336_alignment/run_grpo.py
         code_path: cs336_alignment/run_grpo.py
         code_path_local: run_grpo.py
@@ -64,8 +96,8 @@ _wandb:
         gpu_count: 2
         disk:
           /:
-            total: '266717626368'
-            used: '219797913600'
+            total: '266717757440'
+            used: '225988182016'
         memory:
           total: '64000000000'
         gpu_nvidia:
@@ -80,7 +112,7 @@ _wandb:
           architecture: Ampere
           uuid: GPU-fb328c3d-77de-fb7d-5d9b-1c13ab8c1419
         cuda_version: '12.3'
-        writer_id: aaux62cybt7tlnmcnhl30nnp2fzhdv1m
+        writer_id: 5fcmz7914ehyuv4utc7zsjica34ezitq
     m:
     - 1: grpo_step
       6:
@@ -88,6 +120,10 @@ _wandb:
     - 1: eval_step
       6:
       - 3
+    - 1: train/reward_mean
+      5: 1
+      6:
+      - 1
     - 1: train/reward_max
       5: 1
       6:
@@ -96,7 +132,7 @@ _wandb:
       5: 1
       6:
       - 1
-    - 1: train/reward_mean
+    - 1: train/clip_fraction
       5: 1
       6:
       - 1
@@ -116,15 +152,15 @@ _wandb:
       5: 2
       6:
       - 1
+    - 1: eval/avg_correct_res_length
+      5: 2
+      6:
+      - 1
     - 1: eval/avg_incorrect_res_length
       5: 2
       6:
       - 1
     - 1: eval/accuracy
-      5: 2
-      6:
-      - 1
-    - 1: eval/avg_correct_res_length
       5: 2
       6:
       - 1
