@@ -150,9 +150,44 @@ def compute_grpo_clip_loss(
     return per_token_loss, metadata
 
 
+def compute_grpo_no_clip_loss(
+        advantages: torch.Tensor,
+        policy_log_probs: torch.Tensor,
+        old_log_probs: torch.Tensor
+)->tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    """
+    Args:
+
+    advantages: torch.Tensor Shape (batch_size, 1), per-example advantages A.
+    
+    policy_log_probs: torch.Tensor Shape (batch_size, sequence_length), per-token log probs from the policy being trained.
+
+    old_log_probs: torch.Tensor Shape (batch_size, sequence_length), per-token log probs from the old policy.
+
+    cliprange: float Clip parameter ϵ (e.g. 0.2).
+
+    Returns:
+    tuple[torch.Tensor, dict[str, torch.Tensor]].
+    
+        loss torch.Tensor of shape (batch_size, sequence_length), the per-token clipped loss.
+
+        metadata dict containing whatever you want to log. We suggest logging whether each token was clipped or not, i.e., whether the clipped policy gradient loss on the RHS of the min was lower than the LHS.
+    """
+    # 1. 计算当前策略与旧策略的概率比率
+    # 使用 exp 来保证数值稳定性
+    ratio = torch.exp(policy_log_probs - old_log_probs)  # Shape: (batch_size, sequence_length)
+
+    # 2.将优势值广播到序列维度
+
+    # 3. 计算GRPO-no-clip loss
+    per_token_loss = -ratio * advantages  # Shape: (batch_size, sequence_length)
+
+    return per_token_loss
+
+
 def compute_policy_gradient_loss(
         policy_log_probs: torch.Tensor,
-        loss_type: Literal["no_baseline", "reinforce_with_baseline", "grpo_clip"],
+        loss_type: Literal["no_baseline", "reinforce_with_baseline", "grpo_clip", "grpo_no_clip"],
         raw_rewards: torch.Tensor | None = None,
         advantages: torch.Tensor | None = None,
         old_log_probs: torch.Tensor | None = None,
@@ -169,6 +204,9 @@ def compute_policy_gradient_loss(
         metadata = {}
     elif loss_type == "grpo_clip":
         loss, metadata = compute_grpo_clip_loss(advantages, policy_log_probs, old_log_probs, cliprange)
+    elif loss_type == "grpo_no_clip":
+        loss = compute_grpo_no_clip_loss(advantages, policy_log_probs, old_log_probs)
+        metadata = {}
     return loss, metadata
 
 def masked_mean(
